@@ -1,4 +1,4 @@
-<polymer-element name="ceci-component-canvas" extends="ceci-element" attributes="pensize readonly">
+<polymer-element name="ceci-component-canvas" extends="ceci-element" attributes="pensize readonly imageurl">
   <ceci-definition>
     {
       "name": "Canvas",
@@ -43,27 +43,31 @@
     <shadow></shadow>
   </template>
     <script>
-      function onCanvasMouseDown (eMouseDown) {
-        var canvas = eMouseDown.target;
-        var ctx = canvas.getContext('2d');
+      function enableCanvas (canvas, changedCallback) {
+        changedCallback = changedCallback || function () {};
 
-        ctx.beginPath();
-        ctx.moveTo(eMouseDown.offsetX, eMouseDown.offsetY);
+        return function (eMouseDown) {
+          var canvas = eMouseDown.target;
+          var ctx = canvas.getContext('2d');
 
-        function onCanvasMouseMove (eMouseMove) {
-          ctx.lineTo(eMouseMove.offsetX, eMouseMove.offsetY);
-          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(eMouseDown.offsetX, eMouseDown.offsetY);
+
+          function onCanvasMouseMove (eMouseMove) {
+            ctx.lineTo(eMouseMove.offsetX, eMouseMove.offsetY);
+            ctx.stroke();
+          }
+
+          function onCanvasMouseUp (eMouseUp) {
+            canvas.removeEventListener('mousemove', onCanvasMouseMove, false);
+            window.removeEventListener('mouseup', onCanvasMouseUp, false);
+            ctx.closePath();
+            changedCallback();
+          }
+
+          canvas.addEventListener('mousemove', onCanvasMouseMove, false);
+          window.addEventListener('mouseup', onCanvasMouseUp, false);
         }
-
-        function onCanvasMouseUp (eMouseUp) {
-          canvas.removeEventListener('mousemove', onCanvasMouseMove, false);
-          window.removeEventListener('mouseup', onCanvasMouseUp, false);
-          console.log('LOLOLOL!!');
-          ctx.closePath();
-        }
-
-        canvas.addEventListener('mousemove', onCanvasMouseMove, false);
-        window.addEventListener('mouseup', onCanvasMouseUp, false);
       }
 
       Polymer("ceci-component-canvas", {
@@ -71,8 +75,6 @@
         pensize: 5,
         ready: function() {
           this.super();
-          this.readonlyChanged();
-          this.pensizeChanged();
 
           var cursor = this.$.cursor;
           this.$.canvas.addEventListener('mousemove', function (e) {
@@ -87,16 +89,35 @@
           this.$.canvas.addEventListener('mouseleave', function (e) {
             cursor.hidden = true;
           }, false);
+
+          if (this.imageurl && this.imageurl.indexOf('data:image/png;base64,') === 0) {
+            console.log('Boop', this.imageurl);
+            var img = new Image();
+            var canvas = this.$.canvas;
+            img.onload = function () {
+              canvas.getContext('2d').drawImage(img,0,0);
+            };
+            img.src = this.imageurl;
+          }
+
+          this.readonlyChanged();
+          this.pensizeChanged();
         },
-        readonlyChanged: function (oldValue, newValue) {
+        readonlyChanged: function () {
+          var that = this;
           if (this.readonly === 'false') {
-            this.$.canvas.addEventListener('mousedown', onCanvasMouseDown, false);
+            this._onCanvasMouseDown = enableCanvas(this.$.canvas, function () {
+              that.imageurl = that.$.canvas.toDataURL();
+            });
+            this.$.canvas.addEventListener('mousedown', this._onCanvasMouseDown, false);
           }
           else {
-            this.$.canvas.removeEventListener('mousedown', onCanvasMouseDown, false);
+            if (this._onCanvasMouseDown) {
+              this.$.canvas.removeEventListener('mousedown', this._onCanvasMouseDown, false);
+            }
           }
         },
-        pensizeChanged: function (oldValue, newValue) {
+        pensizeChanged: function () {
           var size = parseInt(this.pensize);
           this.$.canvas.getContext('2d').lineWidth = parseInt(this.pensize);
           this.$.cursor.style.width = size + 'px';
