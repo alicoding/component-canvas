@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 500px;
+  position: relative;
+}
+
+:host canvas {
+  width: 100%;
+  height: 100%;
+  cursor: none;
+}
+
+:host #cursor {
+  background: #000;
+  position: absolute;
+  cursor: none;
+  pointer-events: none;
+}

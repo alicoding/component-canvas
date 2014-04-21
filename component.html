@@ -1,0 +1,123 @@
+<polymer-element name="ceci-component-canvas" extends="ceci-element" attributes="pensize readonly">
+  <ceci-definition>
+    {
+      "name": "Canvas",
+      "tags": "canvas",
+      "thumbnail": "./thumbnail.png",
+      "description": "A canvas for drawing and sharing",
+      "broadcasts": {
+        "imageGenerated": {
+          "label": "Image Generated",
+          "description": "A portable image URL was generated"
+        }
+      },
+      "listeners": {
+        "generateImage": {
+          "label": "Generate Image",
+          "description": "Generates a portable image URL from the drawing"
+        },
+        "reset": {
+          "label": "Reset",
+          "description": "Description for reset"
+        }
+      },
+      "attributes": {
+        "pensize": {
+          "label": "Pen Size",
+          "description": "Width of pen used for drawing",
+          "editable": "number",
+          "min": 1
+        },
+        "readonly": {
+          "label": "Read Only",
+          "description": "Locks/unlocks drawn content",
+          "editable": "boolean"
+        }
+      }
+    }
+  </ceci-definition>
+  <template>
+    <link rel="stylesheet" href="component.css">
+    <canvas id="canvas"></canvas>
+    <div id="cursor" hidden="true"></div>
+    <shadow></shadow>
+  </template>
+    <script>
+      function onCanvasMouseDown (eMouseDown) {
+        var canvas = eMouseDown.target;
+        var ctx = canvas.getContext('2d');
+
+        ctx.beginPath();
+        ctx.moveTo(eMouseDown.offsetX, eMouseDown.offsetY);
+
+        function onCanvasMouseMove (eMouseMove) {
+          ctx.lineTo(eMouseMove.offsetX, eMouseMove.offsetY);
+          ctx.stroke();
+        }
+
+        function onCanvasMouseUp (eMouseUp) {
+          canvas.removeEventListener('mousemove', onCanvasMouseMove, false);
+          window.removeEventListener('mouseup', onCanvasMouseUp, false);
+          console.log('LOLOLOL!!');
+          ctx.closePath();
+        }
+
+        canvas.addEventListener('mousemove', onCanvasMouseMove, false);
+        window.addEventListener('mouseup', onCanvasMouseUp, false);
+      }
+
+      Polymer("ceci-component-canvas", {
+        readonly: 'false',
+        pensize: 5,
+        ready: function() {
+          this.super();
+          this.readonlyChanged();
+          this.pensizeChanged();
+
+          var cursor = this.$.cursor;
+          this.$.canvas.addEventListener('mousemove', function (e) {
+            cursor.style.left = e.offsetX + 'px';
+            cursor.style.top = e.offsetY + 'px';
+          }, false);
+
+          this.$.canvas.addEventListener('mouseenter', function (e) {
+            cursor.hidden = false;
+          }, false);
+
+          this.$.canvas.addEventListener('mouseleave', function (e) {
+            cursor.hidden = true;
+          }, false);
+        },
+        readonlyChanged: function (oldValue, newValue) {
+          if (this.readonly === 'false') {
+            this.$.canvas.addEventListener('mousedown', onCanvasMouseDown, false);
+          }
+          else {
+            this.$.canvas.removeEventListener('mousedown', onCanvasMouseDown, false);
+          }
+        },
+        pensizeChanged: function (oldValue, newValue) {
+          var size = parseInt(this.pensize);
+          this.$.canvas.getContext('2d').lineWidth = parseInt(this.pensize);
+          this.$.cursor.style.width = size + 'px';
+          this.$.cursor.style.height = size + 'px';
+          this.$.cursor.style.marginTop = -(size/2) + 'px';
+          this.$.cursor.style.marginLeft = -(size/2) + 'px';
+        },
+        generateImage: function () {
+          var url = this.$.canvas.toDataURL();
+          this.broadcast('imageGenerated', url);
+        },
+        attached: function () {
+          var rect = this.getBoundingClientRect();
+          this.$.canvas.width = rect.width;
+          this.$.canvas.height = rect.height;
+        },
+        reset: function() {
+          var c = this.$.canvas;
+          c.getContext('2d').clearRect(0, 0, c.width, c.height);
+          this.broadcast('reset');
+        }
+      });
+    </script>
+</polymer-element>
