@@ -43,6 +43,17 @@
     <shadow></shadow>
   </template>
     <script>
+      function getMousePositionOffset(e, canvas) {
+        if (e.offsetX) {
+          return [e.offsetX, e.offsetY];
+        }
+        else {
+          // recover from PointerEvents bug... :/
+          var rect = canvas.getBoundingClientRect();
+          return [e.clientX - rect.left, e.clientY - rect.top];
+        }
+      }
+
       function enableCanvas (canvas, changedCallback) {
         changedCallback = changedCallback || function () {};
 
@@ -50,11 +61,15 @@
           var canvas = eMouseDown.target;
           var ctx = canvas.getContext('2d');
 
+          var canvasRect = canvas.getBoundingClientRect();
+          var startPos = getMousePositionOffset(eMouseDown, canvas);
+
           ctx.beginPath();
-          ctx.moveTo(eMouseDown.offsetX, eMouseDown.offsetY);
+          ctx.moveTo(startPos[0], startPos[1]);
 
           function onCanvasMouseMove (eMouseMove) {
-            ctx.lineTo(eMouseMove.offsetX, eMouseMove.offsetY);
+            var movedPos = getMousePositionOffset(eMouseMove, canvas);
+            ctx.lineTo(movedPos[0], movedPos[1]);
             ctx.stroke();
           }
 
@@ -76,10 +91,12 @@
         ready: function() {
           this.super();
 
+          var that = this;
           var cursor = this.$.cursor;
           this.$.canvas.addEventListener('mousemove', function (e) {
-            cursor.style.left = e.offsetX + 'px';
-            cursor.style.top = e.offsetY + 'px';
+            var pos = getMousePositionOffset(e, that.$.canvas);
+            cursor.style.left = pos[0] + 'px';
+            cursor.style.top = pos[1] + 'px';
           }, false);
 
           this.$.canvas.addEventListener('mouseenter', function (e) {
@@ -91,7 +108,6 @@
           }, false);
 
           if (this.imageurl && this.imageurl.indexOf('data:image/png;base64,') === 0) {
-            console.log('Boop', this.imageurl);
             var img = new Image();
             var canvas = this.$.canvas;
             img.onload = function () {
