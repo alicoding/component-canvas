@@ -2,7 +2,7 @@
 
 ##A canvas for drawing and sharing!
 
-### Development
+### Development!
 
 #### 1. Run the server
 
