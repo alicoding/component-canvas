@@ -55,12 +55,16 @@
   </template>
     <script>
       function getMousePositionOffset(e, canvas) {
-        if (e.offsetX) {
+        var rect = canvas.getBoundingClientRect();
+
+        if (e.touches) {
+          return [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+        }
+        else if (e.offsetX) {
           return [e.offsetX, e.offsetY];
         }
         else {
           // recover from PointerEvents bug... :/
-          var rect = canvas.getBoundingClientRect();
           return [e.clientX - rect.left, e.clientY - rect.top];
         }
       }
@@ -85,11 +89,15 @@
             ctx.lineTo(movedPos[0], movedPos[1]);
             ctx.stroke();
             moved = true;
+            eMouseMove.preventDefault();
           }
 
           function onCanvasMouseUp (eMouseUp) {
             canvas.removeEventListener('mousemove', onCanvasMouseMove, false);
             window.removeEventListener('mouseup', onCanvasMouseUp, false);
+            canvas.removeEventListener('touchmove', onCanvasMouseMove, false);
+            window.removeEventListener('touchend', onCanvasMouseUp, false);
+
             if (!moved) {
               ctx.lineTo(startPos[0] + ctx.lineWidth, startPos[1] + ctx.lineWidth);
               ctx.stroke();
@@ -100,6 +108,8 @@
 
           canvas.addEventListener('mousemove', onCanvasMouseMove, false);
           window.addEventListener('mouseup', onCanvasMouseUp, false);
+          canvas.addEventListener('touchmove', onCanvasMouseMove, false);
+          window.addEventListener('touchend', onCanvasMouseUp, false);
         }
       }
 
@@ -157,10 +167,12 @@
               }
             });
             this.$.canvas.addEventListener('mousedown', this._onCanvasMouseDown, false);
+            this.$.canvas.addEventListener('touchstart', this._onCanvasMouseDown, false);
           }
           else {
             if (this._onCanvasMouseDown) {
               this.$.canvas.removeEventListener('mousedown', this._onCanvasMouseDown, false);
+              this.$.canvas.removeEventListener('touchdown', this._onCanvasMouseDown, false);
             }
           }
         },
