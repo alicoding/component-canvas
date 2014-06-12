@@ -1,4 +1,4 @@
-<polymer-element name="ceci-component-canvas" extends="ceci-element" attributes="pensize readonly imageurl">
+<polymer-element name="ceci-component-canvas" extends="ceci-element" attributes="height pensize readonly imageurl generateonchange">
   <ceci-definition>
     {
       "name": "Canvas",
@@ -8,7 +8,8 @@
       "broadcasts": {
         "imageGenerated": {
           "label": "Image Generated",
-          "description": "A portable image URL was generated"
+          "description": "A portable image URL was generated",
+          "default": "green"
         }
       },
       "listeners": {
@@ -22,6 +23,11 @@
         }
       },
       "attributes": {
+        "generateonchange": {
+          "label": "Generate on Change",
+          "description": "Generate image when canvas is changed",
+          "editable": "boolean"
+        },
         "pensize": {
           "label": "Pen Size",
           "description": "Width of pen used for drawing",
@@ -32,6 +38,11 @@
           "label": "Read Only",
           "description": "Locks/unlocks drawn content",
           "editable": "boolean"
+        },
+        "height": {
+          "label": "Height",
+          "description": "Height of canvas",
+          "editable": "number"
         }
       }
     }
@@ -61,6 +72,8 @@
           var canvas = eMouseDown.target;
           var ctx = canvas.getContext('2d');
 
+          var moved = false;
+
           var canvasRect = canvas.getBoundingClientRect();
           var startPos = getMousePositionOffset(eMouseDown, canvas);
 
@@ -71,11 +84,16 @@
             var movedPos = getMousePositionOffset(eMouseMove, canvas);
             ctx.lineTo(movedPos[0], movedPos[1]);
             ctx.stroke();
+            moved = true;
           }
 
           function onCanvasMouseUp (eMouseUp) {
             canvas.removeEventListener('mousemove', onCanvasMouseMove, false);
             window.removeEventListener('mouseup', onCanvasMouseUp, false);
+            if (!moved) {
+              ctx.lineTo(startPos[0] + ctx.lineWidth, startPos[1] + ctx.lineWidth);
+              ctx.stroke();
+            }
             ctx.closePath();
             changedCallback();
           }
@@ -88,6 +106,16 @@
       Polymer("ceci-component-canvas", {
         readonly: 'false',
         pensize: 5,
+        height: 100,
+        generateonchange: 'false',
+        heightChanged: function () {
+          this.style.height = this.height + 'px';
+          this.async(function () {
+            var rect = this.getBoundingClientRect();
+            this.$.canvas.width = rect.width;
+            this.$.canvas.height = rect.height;
+          });
+        },
         ready: function() {
           this.super();
 
@@ -124,6 +152,9 @@
           if (this.readonly === 'false') {
             this._onCanvasMouseDown = enableCanvas(this.$.canvas, function () {
               that.imageurl = that.$.canvas.toDataURL();
+              if (that.generateonchange === 'true') {
+                that.broadcast('imageGenerated', that.$.canvas.toDataURL());
+              }
             });
             this.$.canvas.addEventListener('mousedown', this._onCanvasMouseDown, false);
           }
@@ -142,13 +173,13 @@
           this.$.cursor.style.marginLeft = -(size/2) + 'px';
         },
         generateImage: function () {
-          var url = this.$.canvas.toDataURL();
-          this.broadcast('imageGenerated', url);
+          this.broadcast('imageGenerated', this.$.canvas.toDataURL());
         },
         attached: function () {
           var rect = this.getBoundingClientRect();
           this.$.canvas.width = rect.width;
           this.$.canvas.height = rect.height;
+          this.super();
         },
         reset: function() {
           var c = this.$.canvas;
