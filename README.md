@@ -1,6 +1,6 @@
 # Component canvas
 
-##A canvas for drawing and sharing
+##A canvas for drawing and sharing!
 
 ### Development
 
